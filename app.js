@@ -1,14 +1,17 @@
+const { db, $, $$, collection, getDocs } = window.MTW;
 /* ============================================================
    CommitBoard — Trello-style workspace with commit history
    - MAIN cards  = projects with full commit/history timeline
    - TODO cards  = tasks in lists, draggable, committable
-   - Storage     = localStorage, export/import JSON
+   - Storage     = localStorage + Firebase Firestore (collection "workstation")
    - Hosting     = any static host / GitHub Pages, no build step
    ============================================================ */
 
 const STORAGE_KEY = 'commitboard-v1';
-
-const $ = (id) => document.getElementById(id);
+const WORKSTATION_COLLECTION = 'workstation';
+const WORKSTATION_DOC = 'main';
+// Extra Firestore helpers exposed by firebase-init.js (writes)
+const { doc, setDoc } = window.MTW || {};
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const nowISO = () => new Date().toISOString();
 const fmtDate = (iso) => {
@@ -21,13 +24,15 @@ const escapeHtml = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&am
 
 /* ---------------- STATE ---------------- */
 
-let state = load() || seed();
+let state = loadLocal() || seed();
 let editingProjectId = null;
 let editingTaskId = null;
 let editingListId = null;
 let commitTaskId = null;
 let selectedColor = '#6366f1';
 let searchTerm = '';
+let cloudEnabled = !!(db && collection && getDocs);
+let lastCloudSavedAt = null;
 
 function seed() {
   const p1 = uid(), p2 = uid();
@@ -60,14 +65,142 @@ function seed() {
   };
 }
 
-function load() {
+function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
+function saveLocal() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) { console.warn('localStorage save failed', e); }
+}
+// Keep old name working (anything still calling load() gets local copy)
+function load() { return loadLocal(); }
+
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  saveLocal();
+  scheduleCloudSave();
+}
+
+/* ---------------- FIREBASE — collection "workstation" ----------------
+   Reads:  getDocs(collection(db, "workstation"))
+   Writes: setDoc(doc(db, "workstation", "main"), state)
+--------------------------------------------------------------------- */
+
+function setSyncStatus(mode, text) {
+  const pill = $('syncStatus');
+  if (!pill) return;
+  pill.classList.remove('cloud', 'syncing', 'error');
+  if (mode) pill.classList.add(mode);
+  pill.textContent = text;
+}
+
+function refreshSyncPill() {
+  if (!cloudEnabled || !db) {
+    setSyncStatus('', '○ local');
+  } else if (lastCloudSavedAt) {
+    setSyncStatus('cloud', '☁ synced ' + fmtDate(lastCloudSavedAt));
+  } else {
+    setSyncStatus('cloud', '☁ cloud on');
+  }
+}
+
+// GET — pull the whole workspace from collection "workstation"
+async function loadFromCloud() {
+  if (!cloudEnabled) return null;
+  setSyncStatus('syncing', '☁ syncing…');
+  try {
+    const snap = await getDocs(collection(db, WORKSTATION_COLLECTION));
+    let mainData = null;
+    snap.forEach((d) => {
+      if (d.id === WORKSTATION_DOC) mainData = { id: d.id, ...d.data() };
+    });
+    // Fallback: if only one doc exists and it isn't "main", use it
+    if (!mainData && !snap.empty && snap.docs && snap.docs.length) {
+      const first = snap.docs[0];
+      mainData = { id: first.id, ...first.data() };
+    }
+    if (mainData && mainData.projects && mainData.lists && mainData.tasks) {
+      lastCloudSavedAt = mainData.updatedAt || null;
+      refreshSyncPill();
+      return mainData;
+    }
+    refreshSyncPill();
+    return null;
+  } catch (e) {
+    console.warn('[cloud] load failed:', e);
+    setSyncStatus('error', '☁ offline');
+    return null;
+  }
+}
+
+// SEND — push the whole workspace to collection "workstation" / doc "main"
+async function pushToCloud() {
+  if (!cloudEnabled || typeof doc !== 'function' || typeof setDoc !== 'function') return false;
+  setSyncStatus('syncing', '☁ saving…');
+  try {
+    const payload = {
+      projects: state.projects,
+      lists: state.lists,
+      tasks: state.tasks,
+      updatedAt: nowISO()
+    };
+    await setDoc(doc(db, WORKSTATION_COLLECTION, WORKSTATION_DOC), payload);
+    lastCloudSavedAt = payload.updatedAt;
+    saveLocal(); // keep local copy in step
+    refreshSyncPill();
+    return true;
+  } catch (e) {
+    console.warn('[cloud] save failed:', e);
+    setSyncStatus('error', '☁ save failed');
+    return false;
+  }
+}
+
+// Debounced auto-push so every drag/commit doesn't spam Firestore
+let _saveTimer = null;
+function scheduleCloudSave() {
+  refreshSyncPill();
+  if (!cloudEnabled) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => { pushToCloud(); }, 800);
+}
+
+// On boot: render local instantly, then reconcile with cloud (newest wins)
+async function initCloudSync() {
+  refreshSyncPill();
+  if (!cloudEnabled) return;
+  const cloud = await loadFromCloud();
+  if (!cloud) {
+    // Nothing in cloud yet → push local state up once
+    if (state && (state.projects.length || state.tasks.length)) {
+      await pushToCloud();
+    }
+    return;
+  }
+  const localRaw = localStorage.getItem(STORAGE_KEY);
+  const cloudTime = cloud.updatedAt ? new Date(cloud.updatedAt).getTime() : 0;
+  let localTime = 0;
+  try {
+    const l = localRaw ? JSON.parse(localRaw) : null;
+    localTime = l && l.updatedAt ? new Date(l.updatedAt).getTime() : 0;
+  } catch {}
+  if (cloudTime >= localTime) {
+    state = {
+      projects: cloud.projects || [],
+      lists: cloud.lists || [],
+      tasks: cloud.tasks || [],
+      updatedAt: cloud.updatedAt
+    };
+    saveLocal();
+    render();
+    toast('☁ Loaded workspace from Firebase');
+  } else {
+    await pushToCloud();
+  }
+  refreshSyncPill();
 }
 
 /* ---------------- TOAST + MODALS ---------------- */
@@ -519,6 +652,7 @@ $('importFile').addEventListener('change', (e) => {
       if (!data.projects || !data.tasks || !data.lists) throw new Error('bad file');
       state = data;
       render();
+      scheduleCloudSave();
       toast('Backup imported ⬆');
     } catch { toast('Invalid backup file'); }
   };
@@ -536,6 +670,29 @@ $('saveProjectBtn').addEventListener('click', saveProject);
 $('saveTaskBtn').addEventListener('click', saveTask);
 $('saveListBtn').addEventListener('click', saveList);
 $('saveCommitBtn').addEventListener('click', saveCommit);
+const _cloudBtn = $('cloudSyncBtn');
+if (_cloudBtn) _cloudBtn.addEventListener('click', async () => {
+  if (!cloudEnabled) {
+    toast('Firebase not configured — paste config in firebase-init.js');
+    return;
+  }
+  toast('☁ Syncing with Firebase…');
+  const ok = await pushToCloud();
+  if (ok) {
+    const cloud = await loadFromCloud();
+    if (cloud && cloud.updatedAt) {
+      state = {
+        projects: cloud.projects || [],
+        lists: cloud.lists || [],
+        tasks: cloud.tasks || [],
+        updatedAt: cloud.updatedAt
+      };
+      saveLocal();
+      render();
+    }
+    toast('☁ Synced with Firebase ✔');
+  }
+});
 
 // expose for inline onclick handlers
 window.editProject = editProject;
@@ -551,3 +708,5 @@ window.deleteList = deleteList;
 
 /* ---------------- INIT ---------------- */
 render();
+refreshSyncPill();
+initCloudSync();

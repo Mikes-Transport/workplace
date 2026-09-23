@@ -19,10 +19,12 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <span id="syncStatus" class="sync-pill" title="Firebase sync status">○ local</span>
       <div class="search-wrap">
         <span>🔍</span>
         <input id="searchInput" type="text" placeholder="Search tasks or commits..." />
       </div>
+      <button class="btn btn-secondary" id="cloudSyncBtn" title="Push local data to Firebase / pull from Firebase">☁ Sync</button>
       <button class="btn btn-secondary" id="exportBtn">⬇ Export</button>
       <button class="btn btn-secondary" id="importBtn">⬆ Import</button>
       <input type="file" id="importFile" accept=".json" hidden />
@@ -138,9 +140,13 @@
   <div id="toast" class="toast"></div>
 
   <footer class="footer">
-    <span>CommitBoard • vanilla JS + HTML + CSS • data saved in your browser (localStorage) • deploy to GitHub Pages as-is</span>
+    <span>CommitBoard • vanilla JS + HTML + CSS • localStorage + Firebase (collection: workstation) • deploy to GitHub Pages as-is</span>
   </footer>
 
+  <!-- Firebase (compat, no build step) + MTW bridge — MUST come before app.js -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-init.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

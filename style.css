@@ -50,6 +50,17 @@ body {
 }
 .search-wrap input { border: 0; outline: 0; width: 200px; font-size: 14px; }
 
+/* Firebase sync pill */
+.sync-pill {
+  font-size: 12px; font-weight: 700;
+  background: #1e293b; border: 1px solid #334155;
+  color: #e2e8f0; border-radius: 20px;
+  padding: 6px 11px; white-space: nowrap;
+}
+.sync-pill.cloud { background: #052e16; border-color: #16a34a; color: #bbf7d0; }
+.sync-pill.syncing { background: #422006; border-color: #f59e0b; color: #fde68a; }
+.sync-pill.error { background: #450a0a; border-color: #ef4444; color: #fecaca; }
+
 /* BUTTONS */
 .btn {
   border: 0; border-radius: 10px;
