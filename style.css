@@ -167,7 +167,7 @@ button { font-family: inherit; }
   overflow: hidden;
 }
 @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } }
-.projects-panel { justify-self: start; width: 100%; min-width: 0; overflow-y:scroll; -ms-overflow-style: none; scrollbar-width: none;}
+.projects-panel { justify-self: start; width: 100%; min-width: 0; max-height: 93vh; overflow-y:scroll; -ms-overflow-style: none; scrollbar-width: none;}
 .projects-panel::-webkit-scrollbar {
   display: none;
 }
