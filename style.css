@@ -162,7 +162,7 @@ button { font-family: inherit; }
 .layout {
   display: grid; grid-template-columns: 390px minmax(0, 1fr);
   gap: 100px; padding: 18px 28px 30px; align-items: start;
-  max-width: 1920px;
+  /* max-width: 1920px; */
   max-height: 93vh;
   overflow: hidden;
 }
