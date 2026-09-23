@@ -161,7 +161,7 @@ button { font-family: inherit; }
 /* ---------- LAYOUT ---------- */
 .layout {
   display: grid; grid-template-columns: 390px minmax(0, 1fr);
-  gap: 1002px; padding: 18px 28px 30px; align-items: start;
+  gap: 100px; padding: 18px 28px 30px; align-items: start;
   max-width: 1920px;
 }
 @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } }
