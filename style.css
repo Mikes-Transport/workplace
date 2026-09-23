@@ -161,15 +161,15 @@ button { font-family: inherit; }
 /* ---------- LAYOUT ---------- */
 .layout {
   display: grid; grid-template-columns: 390px minmax(0, 1fr);
-  gap: 32px; padding: 18px 28px 30px; align-items: start;
-  max-width: 1720px; margin: 0 auto;
+  gap: 1002px; padding: 18px 28px 30px; align-items: start;
+  max-width: 1920px;
 }
 @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } }
 .projects-panel { justify-self: start; width: 100%; min-width: 0; }
 .board-panel {
   min-width: 0;
   border-left: 1px solid var(--border-soft);
-  padding-left: 32px;
+  padding-left: 100px;
 }
 @media (max-width: 1020px) {
   .board-panel { border-left: 0; padding-left: 0; border-top: 1px solid var(--border-soft); padding-top: 20px; }
