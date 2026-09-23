@@ -102,11 +102,11 @@ function save() {
 function loadSettings() {
   try {
     return Object.assign(
-      { theme: 'midnight', accent: '#6366f1' },
+      { theme: 'midnight', accent: '#6366f1', custom: {} },
       JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
     );
   } catch {
-    return { theme: 'midnight', accent: '#6366f1' };
+    return { theme: 'midnight', accent: '#6366f1', custom: {} };
   }
 }
 function saveSettings() {
@@ -117,11 +117,88 @@ function saveSettings() {
 function applySettings() {
   document.documentElement.dataset.theme = settings.theme || 'midnight';
   document.documentElement.style.setProperty('--accent', settings.accent || '#6366f1');
+  // Custom overrides win over the preset (cleared when not set)
+  const customs = settings.custom || {};
+  THEME_VARS.forEach(([key]) => {
+    if (customs[key]) document.documentElement.style.setProperty(key, customs[key]);
+    else document.documentElement.style.removeProperty(key);
+  });
   document.querySelectorAll('#themeOptions button').forEach((b) => {
     b.classList.toggle('selected', b.dataset.themeOpt === settings.theme);
   });
   document.querySelectorAll('#accentOptions button').forEach((b) => {
     b.classList.toggle('selected', b.dataset.accent === settings.accent);
+  });
+  refreshThemeEditor();
+}
+
+/* ---- Custom theme editor: every page color, pick your own ---- */
+const THEME_VARS = [
+  ['--bg', 'Background'],
+  ['--bg2', 'Background alt'],
+  ['--panel', 'Panels'],
+  ['--card', 'Cards'],
+  ['--card2', 'Cards alt'],
+  ['--input', 'Inputs'],
+  ['--border', 'Borders'],
+  ['--text', 'Text'],
+  ['--muted', 'Muted text'],
+  ['--topbar', 'Top bar'],
+  ['--accent', 'Accent'],
+  ['--success', 'Success'],
+  ['--danger', 'Danger'],
+  ['--warn', 'Warning'],
+];
+
+function toHex(v) {
+  v = String(v || '').trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(v)) return v;
+  const m = v.match(/rgba?\(([^)]+)\)/);
+  if (!m) return '#888888';
+  const parts = m[1].split(',').slice(0, 3).map((x) => {
+    x = x.trim();
+    if (x.endsWith('%')) return Math.round((parseFloat(x) / 100) * 255);
+    return parseInt(x, 10);
+  });
+  if (parts.some((n) => Number.isNaN(n))) return '#888888';
+  return '#' + parts.map((n) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
+}
+const effectiveVar = (key) =>
+  toHex(getComputedStyle(document.documentElement).getPropertyValue(key));
+
+function buildThemeEditor() {
+  const wrap = $('#customColors');
+  if (!wrap || wrap.dataset.built) return;
+  wrap.dataset.built = '1';
+  wrap.innerHTML = THEME_VARS.map(([key, label]) => `
+    <div class="theme-row">
+      <span>${label}</span>
+      <code data-hex="${key}"></code>
+      <input type="color" data-var="${key}" value="#888888" aria-label="${label} color" />
+    </div>`).join('');
+  wrap.querySelectorAll('input[type="color"]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      settings.custom = settings.custom || {};
+      settings.custom[inp.dataset.var] = inp.value;
+      if (inp.dataset.var === '--accent') settings.accent = inp.value;
+      document.documentElement.style.setProperty(inp.dataset.var, inp.value);
+      const code = wrap.querySelector(`code[data-hex="${inp.dataset.var}"]`);
+      if (code) code.textContent = inp.value;
+      saveSettings();
+      applySettings();
+    });
+  });
+  refreshThemeEditor();
+}
+
+function refreshThemeEditor() {
+  const wrap = $('#customColors');
+  if (!wrap || !wrap.dataset.built) return;
+  wrap.querySelectorAll('input[type="color"]').forEach((inp) => {
+    const hex = effectiveVar(inp.dataset.var);
+    inp.value = hex;
+    const code = wrap.querySelector(`code[data-hex="${inp.dataset.var}"]`);
+    if (code) code.textContent = hex;
   });
 }
 
@@ -756,6 +833,7 @@ $('#settingsImportFile').addEventListener('change', (e) => {
 /* ---------------- SETTINGS ---------------- */
 
 function openSettings() {
+  buildThemeEditor();
   applySettings();
   openModal('settingsModal');
 }
@@ -785,9 +863,17 @@ document.querySelectorAll('#themeOptions button').forEach((b) => {
 document.querySelectorAll('#accentOptions button').forEach((b) => {
   b.addEventListener('click', () => {
     settings.accent = b.dataset.accent;
+    settings.custom = settings.custom || {};
+    settings.custom['--accent'] = b.dataset.accent;
     saveSettings();
     applySettings();
   });
+});
+$('#resetCustomBtn').addEventListener('click', () => {
+  settings.custom = {};
+  saveSettings();
+  applySettings();
+  toast('Custom colors cleared');
 });
 
 /* ---------------- CONFIRM WIRING ---------------- */
