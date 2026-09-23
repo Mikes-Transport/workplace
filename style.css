@@ -162,7 +162,10 @@ button { font-family: inherit; }
 .layout {
   display: grid; grid-template-columns: 390px minmax(0, 1fr);
   gap: 100px; padding: 18px 28px 30px; align-items: start;
-  max-width: 1920px;
+  max-width: 1920px; max-height:93vh; overflow-y:scroll; -ms-overflow-style: none; scrollbar-width: none;
+}
+.layout::-webkit-scrollbar {
+  display: none;
 }
 @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } }
 .projects-panel { justify-self: start; width: 100%; min-width: 0; }
@@ -210,7 +213,10 @@ button { font-family: inherit; }
 }
 
 /* ---------- BOARD ---------- */
-.board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; }
+.board { display: flex; gap: 14px; overflow: auto; padding-bottom: 12px; align-items: flex-start; -ms-overflow-style: none; scrollbar-width: none; }
+.board::-webkit-scrollbar {
+  display: none;
+}
 .list {
   background: var(--panel); border: 1px solid var(--border-soft);
   min-width: 285px; width: 285px; border-radius: var(--radius); padding: 10px; flex: none;
