@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CommitBoard — Trello + Commit History Workspace</title>
+  <meta name="description" content="Trello-like workspace where TODO cards commit into MAIN project cards with full history." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div>
+        <h1>CommitBoard</h1>
+        <p>Trello-style board + commit history for every project</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-wrap">
+        <span>🔍</span>
+        <input id="searchInput" type="text" placeholder="Search tasks or commits..." />
+      </div>
+      <button class="btn btn-secondary" id="exportBtn">⬇ Export</button>
+      <button class="btn btn-secondary" id="importBtn">⬆ Import</button>
+      <input type="file" id="importFile" accept=".json" hidden />
+      <button class="btn btn-primary" id="newProjectBtn">+ Main Card</button>
+      <button class="btn btn-accent" id="newTaskBtn">+ Todo Card</button>
+    </div>
+  </header>
+
+  <div class="stats-bar" id="statsBar">
+    <!-- filled by JS -->
+  </div>
+
+  <main class="layout">
+    <!-- LEFT: MAIN / COMMIT CARDS -->
+    <section class="projects-panel">
+      <div class="panel-header">
+        <h2>📦 MAIN Cards <span class="hint">— commit / history cards</span></h2>
+        <button class="btn btn-small" id="addProjectBtn2">+ New</button>
+      </div>
+      <p class="panel-sub">Example: <strong>FXL Website</strong>. Finish a TODO, then <strong>Commit</strong> it here. All commit titles + history live on the card.</p>
+      <div id="projectsGrid" class="projects-grid"></div>
+    </section>
+
+    <!-- RIGHT: TODO BOARD -->
+    <section class="board-panel">
+      <div class="panel-header">
+        <h2>🗂️ TODO Board <span class="hint">— drag cards between lists</span></h2>
+        <button class="btn btn-small" id="addListBtn">+ List</button>
+      </div>
+      <div id="board" class="board"></div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="projectModal">
+    <div class="modal">
+      <h3 id="projectModalTitle">New Main Card</h3>
+      <label>Project title * <input id="projectTitle" placeholder="e.g. FXL Website" /></label>
+      <label>Description <textarea id="projectDesc" rows="3" placeholder="What is this project about?"></textarea></label>
+      <label>Card color
+        <div class="color-picker" id="projectColors">
+          <button data-color="#6366f1" style="background:#6366f1" class="selected"></button>
+          <button data-color="#0ea5e9" style="background:#0ea5e9"></button>
+          <button data-color="#10b981" style="background:#10b981"></button>
+          <button data-color="#f59e0b" style="background:#f59e0b"></button>
+          <button data-color="#ef4444" style="background:#ef4444"></button>
+          <button data-color="#8b5cf6" style="background:#8b5cf6"></button>
+          <button data-color="#ec4899" style="background:#ec4899"></button>
+        </div>
+      </label>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveProjectBtn">Save Main Card</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal">
+      <h3 id="taskModalTitle">New Todo Card</h3>
+      <label>Task title * <input id="taskTitle" placeholder="e.g. I have to fix the navbar" /></label>
+      <label>Description <textarea id="taskDesc" rows="3" placeholder="Details, steps, links..."></textarea></label>
+      <div class="row-2">
+        <label>List <select id="taskList"></select></label>
+        <label>Linked Main Card <select id="taskProject"></select></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveTaskBtn">Save Todo Card</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="commitModal">
+    <div class="modal">
+      <h3>✔ Commit to Main Card</h3>
+      <p class="muted" id="commitTaskName"></p>
+      <label>Commit to Main Card * <select id="commitProject"></select></label>
+      <label>Commit title — what changed? * <input id="commitTitle" placeholder="e.g. Fixed responsive navbar + new hero" /></label>
+      <label>Commit message <textarea id="commitMessage" rows="3" placeholder="Optional details about this change..."></textarea></label>
+      <label class="check"><input type="checkbox" id="commitAndMove" checked /> Move task to Done after commit</label>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-accent" id="saveCommitBtn">Push Commit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal modal-large">
+      <div class="history-head">
+        <div>
+          <h3 id="historyTitle">History</h3>
+          <p class="muted" id="historySub"></p>
+        </div>
+        <button class="btn btn-secondary" data-close>✕ Close</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="listModal">
+    <div class="modal">
+      <h3 id="listModalTitle">New List</h3>
+      <label>List name * <input id="listTitle" placeholder="e.g. Review" /></label>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveListBtn">Save List</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <footer class="footer">
+    <span>CommitBoard • vanilla JS + HTML + CSS • data saved in your browser (localStorage) • deploy to GitHub Pages as-is</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
