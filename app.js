@@ -10,7 +10,7 @@ const { db, $, $$, collection, getDocs } = window.MTW;
 const STORAGE_KEY = 'commitboard-v1';
 const WORKSTATION_COLLECTION = 'workstation';
 const WORKSTATION_DOC = 'main';
-// Extra Firestore helpers exposed by firebase-init.js (writes)
+// Extra Firestore helpers provided by window.MTW (set in Webflow, stubbed locally)
 const { doc, setDoc } = window.MTW || {};
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const nowISO = () => new Date().toISOString();
@@ -90,7 +90,7 @@ function save() {
 --------------------------------------------------------------------- */
 
 function setSyncStatus(mode, text) {
-  const pill = $('syncStatus');
+  const pill = $('#syncStatus');
   if (!pill) return;
   pill.classList.remove('cloud', 'syncing', 'error');
   if (mode) pill.classList.add(mode);
@@ -206,14 +206,19 @@ async function initCloudSync() {
 /* ---------------- TOAST + MODALS ---------------- */
 
 function toast(msg) {
-  const el = $('toast');
+  const el = $('#toast');
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-function openModal(id) { $(id).classList.add('open'); }
+function openModal(id) {
+  // $ is querySelector-only (window.MTW), so normalize bare ids: 'x' -> '#x'
+  const sel = typeof id === 'string' ? (id.startsWith('#') ? id : '#' + id) : id;
+  const el = typeof sel === 'string' ? $(sel) : sel;
+  if (el) el.classList.add('open');
+}
 function closeModal(el) { el.classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach((ov) => {
   ov.addEventListener('click', (e) => {
@@ -265,7 +270,7 @@ function render() {
 function renderStats() {
   const totalCommits = state.projects.reduce((n, p) => n + p.commits.length, 0);
   const openTasks = state.tasks.filter((t) => !t.committed).length;
-  $('statsBar').innerHTML = `
+  $('#statsBar').innerHTML = `
     <div class="stat"><b>${state.projects.length}</b><span>📦 Main cards</span></div>
     <div class="stat"><b>${state.tasks.length}</b><span>🗂️ Todo cards (${openTasks} open)</span></div>
     <div class="stat"><b>${totalCommits}</b><span>✔ Total commits</span></div>
@@ -274,7 +279,7 @@ function renderStats() {
 }
 
 function renderProjects() {
-  const grid = $('projectsGrid');
+  const grid = $('#projectsGrid');
   const projects = filteredProjects();
   if (!projects.length) {
     grid.innerHTML = `<div class="empty-box">No Main cards yet.<br/>Click <b>+ Main Card</b> to create one like <b>FXL Website</b>.</div>`;
@@ -304,7 +309,7 @@ function renderProjects() {
 }
 
 function renderBoard() {
-  const board = $('board');
+  const board = $('#board');
   if (!state.lists.length) {
     board.innerHTML = `<div class="empty-box">No lists. Click <b>+ List</b>.</div>`;
     return;
@@ -383,9 +388,9 @@ function attachDrag() {
 
 function openProjectModal() {
   editingProjectId = null;
-  $('projectModalTitle').textContent = 'New Main Card';
-  $('projectTitle').value = '';
-  $('projectDesc').value = '';
+  $('#projectModalTitle').textContent = 'New Main Card';
+  $('#projectTitle').value = '';
+  $('#projectDesc').value = '';
   selectedColor = '#6366f1';
   syncColors();
   openModal('projectModal');
@@ -395,9 +400,9 @@ function editProject(id) {
   const p = getProject(id);
   if (!p) return;
   editingProjectId = id;
-  $('projectModalTitle').textContent = 'Edit Main Card';
-  $('projectTitle').value = p.title;
-  $('projectDesc').value = p.description || '';
+  $('#projectModalTitle').textContent = 'Edit Main Card';
+  $('#projectTitle').value = p.title;
+  $('#projectDesc').value = p.description || '';
   selectedColor = p.color || '#6366f1';
   syncColors();
   openModal('projectModal');
@@ -413,23 +418,23 @@ document.querySelectorAll('#projectColors button').forEach((b) => {
 });
 
 function saveProject() {
-  const title = $('projectTitle').value.trim();
+  const title = $('#projectTitle').value.trim();
   if (!title) return toast('Give the Main card a title (e.g. FXL Website)');
   if (editingProjectId) {
     const p = getProject(editingProjectId);
     p.title = title;
-    p.description = $('projectDesc').value.trim();
+    p.description = $('#projectDesc').value.trim();
     p.color = selectedColor;
     toast('Main card updated');
   } else {
     state.projects.push({
       id: uid(), title,
-      description: $('projectDesc').value.trim(),
+      description: $('#projectDesc').value.trim(),
       color: selectedColor, createdAt: nowISO(), commits: []
     });
     toast(`Main card "${title}" created 📦`);
   }
-  closeModal($('projectModal'));
+  closeModal($('#projectModal'));
   render();
 }
 
@@ -447,18 +452,18 @@ function deleteProject(id) {
 
 function openListModal() {
   editingListId = null;
-  $('listModalTitle').textContent = 'New List';
-  $('listTitle').value = '';
+  $('#listModalTitle').textContent = 'New List';
+  $('#listTitle').value = '';
   openModal('listModal');
 }
 function editList(id) {
   editingListId = id;
-  $('listModalTitle').textContent = 'Rename List';
-  $('listTitle').value = getList(id)?.title || '';
+  $('#listModalTitle').textContent = 'Rename List';
+  $('#listTitle').value = getList(id)?.title || '';
   openModal('listModal');
 }
 function saveList() {
-  const title = $('listTitle').value.trim();
+  const title = $('#listTitle').value.trim();
   if (!title) return toast('List needs a name');
   if (editingListId) {
     getList(editingListId).title = title;
@@ -467,7 +472,7 @@ function saveList() {
     state.lists.push({ id: uid(), title });
     toast(`List "${title}" added`);
   }
-  closeModal($('listModal'));
+  closeModal($('#listModal'));
   render();
 }
 function deleteList(id) {
@@ -482,17 +487,17 @@ function deleteList(id) {
 /* ---------------- TASK CRUD ---------------- */
 
 function fillTaskSelects(activeListId, activeProjectId) {
-  $('taskList').innerHTML = state.lists.map((l) =>
+  $('#taskList').innerHTML = state.lists.map((l) =>
     `<option value="${l.id}" ${l.id === activeListId ? 'selected' : ''}>${escapeHtml(l.title)}</option>`).join('');
-  $('taskProject').innerHTML = `<option value="">— No Main card —</option>` + state.projects.map((p) =>
+  $('#taskProject').innerHTML = `<option value="">— No Main card —</option>` + state.projects.map((p) =>
     `<option value="${p.id}" ${p.id === activeProjectId ? 'selected' : ''}>${escapeHtml(p.title)}</option>`).join('');
 }
 
 function openTaskModal(listId) {
   editingTaskId = null;
-  $('taskModalTitle').textContent = 'New Todo Card';
-  $('taskTitle').value = '';
-  $('taskDesc').value = '';
+  $('#taskModalTitle').textContent = 'New Todo Card';
+  $('#taskTitle').value = '';
+  $('#taskDesc').value = '';
   fillTaskSelects(listId || state.lists[0]?.id, state.projects[0]?.id);
   openModal('taskModal');
 }
@@ -501,21 +506,21 @@ function editTask(id) {
   const t = state.tasks.find((x) => x.id === id);
   if (!t) return;
   editingTaskId = id;
-  $('taskModalTitle').textContent = 'Edit Todo Card';
-  $('taskTitle').value = t.title;
-  $('taskDesc').value = t.description || '';
+  $('#taskModalTitle').textContent = 'Edit Todo Card';
+  $('#taskTitle').value = t.title;
+  $('#taskDesc').value = t.description || '';
   fillTaskSelects(t.listId, t.projectId);
   openModal('taskModal');
 }
 
 function saveTask() {
-  const title = $('taskTitle').value.trim();
+  const title = $('#taskTitle').value.trim();
   if (!title) return toast('Todo card needs a title');
   const data = {
     title,
-    description: $('taskDesc').value.trim(),
-    listId: $('taskList').value,
-    projectId: $('taskProject').value || null,
+    description: $('#taskDesc').value.trim(),
+    listId: $('#taskList').value,
+    projectId: $('#taskProject').value || null,
   };
   if (editingTaskId) {
     Object.assign(state.tasks.find((t) => t.id === editingTaskId), data);
@@ -524,7 +529,7 @@ function saveTask() {
     state.tasks.push({ id: uid(), committed: false, createdAt: nowISO(), ...data });
     toast('Todo card added 🗂️');
   }
-  closeModal($('taskModal'));
+  closeModal($('#taskModal'));
   render();
 }
 
@@ -541,13 +546,13 @@ function openCommit(taskId) {
   if (!t) return;
   if (!state.projects.length) return toast('Create a Main card first!');
   commitTaskId = taskId;
-  $('commitTaskName').textContent = `Task: "${t.title}"`;
-  $('commitProject').innerHTML = state.projects.map((p) =>
+  $('#commitTaskName').textContent = `Task: "${t.title}"`;
+  $('#commitProject').innerHTML = state.projects.map((p) =>
     `<option value="${p.id}" ${p.id === (t.projectId || state.projects[0].id) ? 'selected' : ''}>${escapeHtml(p.title)}</option>`).join('');
-  $('commitTitle').value = t.title;
-  $('commitMessage').value = t.description || '';
+  $('#commitTitle').value = t.title;
+  $('#commitMessage').value = t.description || '';
   openModal('commitModal');
-  setTimeout(() => $('commitTitle').focus(), 50);
+  setTimeout(() => $('#commitTitle').focus(), 50);
 }
 
 // "Quick commit" from a project card — manual entry not tied to a task
@@ -566,7 +571,7 @@ function quickCommit(projectId) {
     || state.tasks[0];
   openCommit(cand.id);
   // pre-select the project the button was pressed on
-  setTimeout(() => { $('commitProject').value = projectId; }, 50);
+  setTimeout(() => { $('#commitProject').value = projectId; }, 50);
 }
 
 function pushCommit(projectId, { title, message, taskTitle, taskId }) {
@@ -582,25 +587,25 @@ function pushCommit(projectId, { title, message, taskTitle, taskId }) {
 
 function saveCommit() {
   const t = state.tasks.find((x) => x.id === commitTaskId);
-  const projectId = $('commitProject').value;
-  const title = $('commitTitle').value.trim();
+  const projectId = $('#commitProject').value;
+  const title = $('#commitTitle').value.trim();
   if (!projectId) return toast('Pick a Main card to commit to');
   if (!title) return toast('Write a commit title — what changed?');
   pushCommit(projectId, {
     title,
-    message: $('commitMessage').value,
+    message: $('#commitMessage').value,
     taskTitle: t?.title || 'manual',
     taskId: t?.id || null
   });
   if (t) {
     t.projectId = projectId;
     t.committed = true;
-    if ($('commitAndMove').checked) {
+    if ($('#commitAndMove').checked) {
       const done = doneListId();
       if (done) t.listId = done;
     }
   }
-  closeModal($('commitModal'));
+  closeModal($('#commitModal'));
   render();
   const pname = getProject(projectId)?.title;
   toast(`✔ Committed to "${pname}"`);
@@ -609,9 +614,9 @@ function saveCommit() {
 function openHistory(projectId) {
   const p = getProject(projectId);
   if (!p) return;
-  $('historyTitle').textContent = `📜 ${p.title} — commit history`;
-  $('historySub').textContent = `${p.commits.length} commit(s) • created ${fmtDate(p.createdAt)}`;
-  const list = $('historyList');
+  $('#historyTitle').textContent = `📜 ${p.title} — commit history`;
+  $('#historySub').textContent = `${p.commits.length} commit(s) • created ${fmtDate(p.createdAt)}`;
+  const list = $('#historyList');
   if (!p.commits.length) {
     list.innerHTML = `<div class="empty-box">No commits yet. Finish a TODO and press <b>✔ Commit</b>, choosing <b>${escapeHtml(p.title)}</b>.</div>`;
   } else {
@@ -627,13 +632,13 @@ function openHistory(projectId) {
 
 /* ---------------- SEARCH / EXPORT / IMPORT ---------------- */
 
-$('searchInput').addEventListener('input', (e) => {
+$('#searchInput').addEventListener('input', (e) => {
   searchTerm = e.target.value.trim();
   renderProjects();
   renderBoard();
 });
 
-$('exportBtn').addEventListener('click', () => {
+$('#exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -641,8 +646,8 @@ $('exportBtn').addEventListener('click', () => {
   a.click();
   toast('Backup exported ⬇');
 });
-$('importBtn').addEventListener('click', () => $('importFile').click());
-$('importFile').addEventListener('change', (e) => {
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', (e) => {
   const f = e.target.files[0];
   if (!f) return;
   const r = new FileReader();
@@ -662,18 +667,18 @@ $('importFile').addEventListener('change', (e) => {
 
 /* ---------------- WIRING ---------------- */
 
-$('newProjectBtn').addEventListener('click', openProjectModal);
-$('addProjectBtn2').addEventListener('click', openProjectModal);
-$('newTaskBtn').addEventListener('click', () => openTaskModal());
-$('addListBtn').addEventListener('click', openListModal);
-$('saveProjectBtn').addEventListener('click', saveProject);
-$('saveTaskBtn').addEventListener('click', saveTask);
-$('saveListBtn').addEventListener('click', saveList);
-$('saveCommitBtn').addEventListener('click', saveCommit);
-const _cloudBtn = $('cloudSyncBtn');
+$('#newProjectBtn').addEventListener('click', openProjectModal);
+$('#addProjectBtn2').addEventListener('click', openProjectModal);
+$('#newTaskBtn').addEventListener('click', () => openTaskModal());
+$('#addListBtn').addEventListener('click', openListModal);
+$('#saveProjectBtn').addEventListener('click', saveProject);
+$('#saveTaskBtn').addEventListener('click', saveTask);
+$('#saveListBtn').addEventListener('click', saveList);
+$('#saveCommitBtn').addEventListener('click', saveCommit);
+const _cloudBtn = $('#cloudSyncBtn');
 if (_cloudBtn) _cloudBtn.addEventListener('click', async () => {
   if (!cloudEnabled) {
-    toast('Firebase not configured — paste config in firebase-init.js');
+    toast('Firebase not configured — running on localStorage');
     return;
   }
   toast('☁ Syncing with Firebase…');

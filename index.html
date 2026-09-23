@@ -143,10 +143,22 @@
     <span>CommitBoard • vanilla JS + HTML + CSS • localStorage + Firebase (collection: workstation) • deploy to GitHub Pages as-is</span>
   </footer>
 
-  <!-- Firebase (compat, no build step) + MTW bridge — MUST come before app.js -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="firebase-init.js"></script>
+  <!-- window.MTW is provided by Webflow (db + querySelector $/$$ + Firestore fns).
+       Local fallback below only kicks in for standalone/GitHub Pages preview
+       so app.js line 1 never throws. It does NOT re-init Firebase. -->
+  <script>
+    if (!window.MTW) {
+      window.MTW = {
+        db: null,
+        $: function (s) { return document.querySelector(s); },
+        $$: function (s) { return Array.from(document.querySelectorAll(s)); },
+        collection: function () { throw new Error('Firebase not configured'); },
+        getDocs: async function () { return { empty: true, docs: [], forEach: function () {} }; },
+        doc: function () { throw new Error('Firebase not configured'); },
+        setDoc: async function () { return false; }
+      };
+    }
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
