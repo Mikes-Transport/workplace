@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="midnight">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,145 +7,207 @@
   <meta name="description" content="Trello-like workspace where TODO cards commit into MAIN project cards with full history." />
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logo">◈</div>
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><line x1="6" y1="8.5" x2="6" y2="15.5"/><path d="M6 12h5a3 3 0 0 0 3-3V7"/><path d="M11 12h1"/></svg>
+      </div>
       <div>
         <h1>CommitBoard</h1>
-        <p>Trello-style board + commit history for every project</p>
+        <p>Projects with commit history + a board that feeds them</p>
       </div>
     </div>
     <div class="topbar-actions">
-      <span id="syncStatus" class="sync-pill" title="Firebase sync status">○ local</span>
+      <span id="syncStatus" class="sync-pill" title="Firebase sync status">Local mode</span>
       <div class="search-wrap">
-        <span>🔍</span>
-        <input id="searchInput" type="text" placeholder="Search tasks or commits..." />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="searchInput" type="text" placeholder="Search tasks or commits...  ( / )" autocomplete="off" />
       </div>
-      <button class="btn btn-secondary" id="cloudSyncBtn" title="Push local data to Firebase / pull from Firebase">☁ Sync</button>
-      <button class="btn btn-secondary" id="exportBtn">⬇ Export</button>
-      <button class="btn btn-secondary" id="importBtn">⬆ Import</button>
-      <input type="file" id="importFile" accept=".json" hidden />
-      <button class="btn btn-primary" id="newProjectBtn">+ Main Card</button>
-      <button class="btn btn-accent" id="newTaskBtn">+ Todo Card</button>
+      <button class="icon-btn-lg" id="settingsBtn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </button>
     </div>
   </header>
-
-  <div class="stats-bar" id="statsBar">
-    <!-- filled by JS -->
-  </div>
 
   <main class="layout">
     <!-- LEFT: MAIN / COMMIT CARDS -->
     <section class="projects-panel">
       <div class="panel-header">
-        <h2>📦 MAIN Cards <span class="hint">— commit / history cards</span></h2>
-        <button class="btn btn-small" id="addProjectBtn2">+ New</button>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          Main cards <span class="hint">commit / history</span>
+        </h2>
+        <button class="btn btn-small btn-primary" id="addProjectBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New
+        </button>
       </div>
-      <p class="panel-sub">Example: <strong>FXL Website</strong>. Finish a TODO, then <strong>Commit</strong> it here. All commit titles + history live on the card.</p>
+      <p class="panel-sub">Finish a todo, commit it to a project. The full history lives on the card.</p>
       <div id="projectsGrid" class="projects-grid"></div>
     </section>
 
     <!-- RIGHT: TODO BOARD -->
     <section class="board-panel">
       <div class="panel-header">
-        <h2>🗂️ TODO Board <span class="hint">— drag cards between lists</span></h2>
-        <button class="btn btn-small" id="addListBtn">+ List</button>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Todo board <span class="hint">drag cards between lists</span>
+        </h2>
+        <button class="btn btn-small btn-ghost" id="addListBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          List
+        </button>
       </div>
       <div id="board" class="board"></div>
     </section>
   </main>
 
-  <!-- MODALS -->
+  <!-- PROJECT MODAL -->
   <div class="modal-overlay" id="projectModal">
-    <div class="modal">
-      <h3 id="projectModalTitle">New Main Card</h3>
-      <label>Project title * <input id="projectTitle" placeholder="e.g. FXL Website" /></label>
-      <label>Description <textarea id="projectDesc" rows="3" placeholder="What is this project about?"></textarea></label>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="projectModalTitle">New main card</h3>
+      <label>Project title<input id="projectTitle" placeholder="e.g. FXL Website" autocomplete="off" /></label>
+      <label>Description<textarea id="projectDesc" rows="3" placeholder="What is this project about?"></textarea></label>
       <label>Card color
         <div class="color-picker" id="projectColors">
-          <button data-color="#6366f1" style="background:#6366f1" class="selected"></button>
-          <button data-color="#0ea5e9" style="background:#0ea5e9"></button>
-          <button data-color="#10b981" style="background:#10b981"></button>
-          <button data-color="#f59e0b" style="background:#f59e0b"></button>
-          <button data-color="#ef4444" style="background:#ef4444"></button>
-          <button data-color="#8b5cf6" style="background:#8b5cf6"></button>
-          <button data-color="#ec4899" style="background:#ec4899"></button>
+          <button data-color="#6366f1" style="background:#6366f1" class="selected" aria-label="Indigo"></button>
+          <button data-color="#0ea5e9" style="background:#0ea5e9" aria-label="Sky"></button>
+          <button data-color="#14b8a6" style="background:#14b8a6" aria-label="Teal"></button>
+          <button data-color="#22c55e" style="background:#22c55e" aria-label="Green"></button>
+          <button data-color="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
+          <button data-color="#f43f5e" style="background:#f43f5e" aria-label="Rose"></button>
         </div>
       </label>
       <div class="modal-actions">
-        <button class="btn btn-secondary" data-close>Cancel</button>
-        <button class="btn btn-primary" id="saveProjectBtn">Save Main Card</button>
+        <button class="btn btn-ghost" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveProjectBtn">Save</button>
       </div>
     </div>
   </div>
 
+  <!-- TASK MODAL -->
   <div class="modal-overlay" id="taskModal">
-    <div class="modal">
-      <h3 id="taskModalTitle">New Todo Card</h3>
-      <label>Task title * <input id="taskTitle" placeholder="e.g. I have to fix the navbar" /></label>
-      <label>Description <textarea id="taskDesc" rows="3" placeholder="Details, steps, links..."></textarea></label>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="taskModalTitle">New todo card</h3>
+      <label>Task title<input id="taskTitle" placeholder="e.g. Fix the navbar" autocomplete="off" /></label>
+      <label>Description<textarea id="taskDesc" rows="3" placeholder="Details, steps, links..."></textarea></label>
       <div class="row-2">
-        <label>List <select id="taskList"></select></label>
-        <label>Linked Main Card <select id="taskProject"></select></label>
+        <label>List<select id="taskList"></select></label>
+        <label>Linked main card<select id="taskProject"></select></label>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" data-close>Cancel</button>
-        <button class="btn btn-primary" id="saveTaskBtn">Save Todo Card</button>
+        <button class="btn btn-ghost" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveTaskBtn">Save</button>
       </div>
     </div>
   </div>
 
+  <!-- COMMIT MODAL -->
   <div class="modal-overlay" id="commitModal">
-    <div class="modal">
-      <h3>✔ Commit to Main Card</h3>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Commit to main card</h3>
       <p class="muted" id="commitTaskName"></p>
-      <label>Commit to Main Card * <select id="commitProject"></select></label>
-      <label>Commit title — what changed? * <input id="commitTitle" placeholder="e.g. Fixed responsive navbar + new hero" /></label>
-      <label>Commit message <textarea id="commitMessage" rows="3" placeholder="Optional details about this change..."></textarea></label>
-      <label class="check"><input type="checkbox" id="commitAndMove" checked /> Move task to Done after commit</label>
+      <label>Commit to main card<select id="commitProject"></select></label>
+      <label>Commit title — what changed?<input id="commitTitle" placeholder="e.g. Fixed responsive navbar" autocomplete="off" /></label>
+      <label>Commit message<textarea id="commitMessage" rows="3" placeholder="Optional details..."></textarea></label>
+      <p class="muted small">Committing archives the todo card — it is removed from the board.</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" data-close>Cancel</button>
-        <button class="btn btn-accent" id="saveCommitBtn">Push Commit</button>
+        <button class="btn btn-ghost" data-close>Cancel</button>
+        <button class="btn btn-success" id="saveCommitBtn">Push commit</button>
       </div>
     </div>
   </div>
 
+  <!-- HISTORY MODAL -->
   <div class="modal-overlay" id="historyModal">
-    <div class="modal modal-large">
+    <div class="modal modal-large" role="dialog" aria-modal="true">
       <div class="history-head">
         <div>
           <h3 id="historyTitle">History</h3>
           <p class="muted" id="historySub"></p>
         </div>
-        <button class="btn btn-secondary" data-close>✕ Close</button>
+        <button class="btn btn-ghost" data-close>Close</button>
       </div>
       <div id="historyList" class="history-list"></div>
     </div>
   </div>
 
+  <!-- LIST MODAL -->
   <div class="modal-overlay" id="listModal">
-    <div class="modal">
-      <h3 id="listModalTitle">New List</h3>
-      <label>List name * <input id="listTitle" placeholder="e.g. Review" /></label>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="listModalTitle">New list</h3>
+      <label>List name<input id="listTitle" placeholder="e.g. Review" autocomplete="off" /></label>
       <div class="modal-actions">
-        <button class="btn btn-secondary" data-close>Cancel</button>
-        <button class="btn btn-primary" id="saveListBtn">Save List</button>
+        <button class="btn btn-ghost" data-close>Cancel</button>
+        <button class="btn btn-primary" id="saveListBtn">Save</button>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Settings</h3>
+      <label>Theme
+        <div class="segmented" id="themeOptions">
+          <button data-theme-opt="midnight">Midnight</button>
+          <button data-theme-opt="graphite">Graphite</button>
+          <button data-theme-opt="arctic">Arctic</button>
+        </div>
+      </label>
+      <label>Accent
+        <div class="color-picker" id="accentOptions">
+          <button data-accent="#6366f1" style="background:#6366f1" aria-label="Indigo"></button>
+          <button data-accent="#0ea5e9" style="background:#0ea5e9" aria-label="Sky"></button>
+          <button data-accent="#14b8a6" style="background:#14b8a6" aria-label="Teal"></button>
+          <button data-accent="#22c55e" style="background:#22c55e" aria-label="Green"></button>
+          <button data-accent="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
+          <button data-accent="#f43f5e" style="background:#f43f5e" aria-label="Rose"></button>
+        </div>
+      </label>
+      <label>Workspace
+        <div class="settings-row">
+          <button class="btn btn-ghost" id="settingsSyncBtn">Sync now</button>
+          <button class="btn btn-ghost" id="settingsExportBtn">Export</button>
+          <button class="btn btn-ghost" id="settingsImportBtn">Import</button>
+          <input type="file" id="settingsImportFile" accept=".json" hidden />
+        </div>
+      </label>
+      <label>Danger zone
+        <div class="settings-row">
+          <button class="btn btn-danger" id="settingsResetBtn">Reset demo data</button>
+        </div>
+      </label>
+      <div class="modal-actions">
+        <button class="btn btn-primary" data-close>Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal modal-small" role="alertdialog" aria-modal="true">
+      <h3 id="confirmTitle">Delete?</h3>
+      <p class="muted" id="confirmMessage"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
+        <button class="btn btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
 
   <footer class="footer">
-    <span>CommitBoard • vanilla JS + HTML + CSS • localStorage + Firebase (collection: workstation) • deploy to GitHub Pages as-is</span>
+    <span>CommitBoard — local-first, syncs to Firebase when configured</span>
   </footer>
 
   <!-- window.MTW is provided by Webflow (db + querySelector $/$$ + Firestore fns).
-       Local fallback below only kicks in for standalone/GitHub Pages preview
-       so app.js line 1 never throws. It does NOT re-init Firebase. -->
+       Local fallback below only kicks in for standalone preview. -->
   <script>
     if (!window.MTW) {
       window.MTW = {
