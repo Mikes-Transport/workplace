@@ -163,8 +163,6 @@ button { font-family: inherit; }
   display: grid; grid-template-columns: 390px minmax(0, 1fr);
   gap: 100px; padding: 18px 28px 30px; align-items: start;
   /* max-width: 1920px; */
-  max-height: 93vh;
-  overflow: hidden;
 }
 @media (max-width: 1020px) { .layout { grid-template-columns: 1fr; } }
 .projects-panel { justify-self: start; width: 100%; min-width: 0; max-height: 93vh; overflow-y:scroll; -ms-overflow-style: none; scrollbar-width: none;}
